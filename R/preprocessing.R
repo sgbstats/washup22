@@ -6,14 +6,16 @@ walks=read_xlsx("Data/streets.xlsx", sheet= "Walks")
 pools=read_xlsx("Data/Pools.xlsx")
 boxes0=read_xlsx("Data/boxes.xlsx") %>% mutate(total=ipvotesest+pvvotesest, Box=paste("4", Box, sep=""))
 
-regdata <- read_excel("Confidential/regdata.xlsx")
+# This was moved to a file not in the repo for security concerns
+regdata <- read_excel("C:\\Users\\mbbx4sb5\\OneDrive\\LD\\Side projects\\Shiny washup\\regdata.xlsx")
 
 regdata2 = regdata 
 # %>% merge(streets, by=c("AddressLine1", "AddressLine2", "AddressLine3", "City","PostalCode")) %>%
 #   select(-c("AddressLine1", "AddressLine2", "AddressLine3", "City","PostalCode")) %>% 
 # merge(walks, by="Walk")
+#this was removed as a feature when I was thinking of doing streets.
 
-
+#merging in the data for each of the pools
 Data=regdata2 %>% 
   mutate(Shuttle=`Voter File VANID`%in%pools$Shuttle,
          L22=`Voter File VANID`%in%pools$L22,
@@ -36,6 +38,7 @@ Data=regdata2 %>%
 
 DEcount=read.csv("Data/Boxest.csv") %>% select(Box, LD) %>% mutate(LD=LD/100, Box=paste("4", Box, sep="")) %>% filter(grepl("DE", Box)) 
 
+#this is lazy because I had the box estimates from the counts already done but not the numbers in each box for East so wanted to go back an make the file match although in hindsight now that I have the data I can do the estimates like I did for west. 
 DEIP=Data %>% filter(WardName=="Didsbury East") %>% 
   filter(L22, !PV) %>% 
   count(PollingDistrictCode) %>% 
