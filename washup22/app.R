@@ -8,6 +8,7 @@ library(ggplot2)
 library(ggsankey)
 library(htmltools)
 library(flextable)
+library(htmlwidgets)
 
 
 `%notin%`=Negate(`%in%`)
@@ -24,6 +25,19 @@ ui <- fluidPage(
       }
     "))
   ),
+  tags$head(tags$script('
+                                var dimension = [0, 0];
+                                $(document).on("shiny:connected", function(e) {
+                                    dimension[0] = window.innerWidth;
+                                    dimension[1] = window.innerHeight;
+                                    Shiny.onInputChange("dimension", dimension);
+                                });
+                                $(window).resize(function(e) {
+                                    dimension[0] = window.innerWidth;
+                                    dimension[1] = window.innerHeight;
+                                    Shiny.onInputChange("dimension", dimension);
+                                });
+                            ')),
   tabsetPanel(
     tabPanel("Basic Stats", fluid=T,
              sidebarLayout(
@@ -48,10 +62,11 @@ ui <- fluidPage(
                              choices = yearreg, selected = yearreg,                 
                              options = list(`actions-box` = TRUE),
                              multiple = T),
+                 checkboxInput("av", "Display ward turnout"),
                  width=4
                ),
                mainPanel(
-                 plotOutput("distPlot1")
+                 plotOutput("distPlot1", width = "100%")
                )
              )
     ),
@@ -60,11 +75,11 @@ ui <- fluidPage(
                sidebarPanel(
                  checkboxGroupInput("ward2", "Ward", choices = c("Didsbury East", "Didsbury West"), selected =  "Didsbury West", inline = T),
                  radioButtons("Box", "Postal voters", choices = c("In Boxes", "Separate"), selected = "In Boxes", inline = T),
-                 width=4
+                 width=4,
+                 tags$p("Faint part is phantom LD voters: the number of votes for us in the box minus those on the shuttle that voted (who are in block colour)")
                ),
                mainPanel(
-                 plotOutput("distPlot2"),
-                 tags$ul("Faint part is phantom LD voters: the number of votes in the box minus those on the shuttle that voted")
+                 plotOutput("distPlot2")
                )
              )
     ),
@@ -91,7 +106,7 @@ ui <- fluidPage(
              sidebarLayout(
                sidebarPanel(
                  checkboxGroupInput("ward4", "Ward", choices = c("Didsbury East", "Didsbury West"), selected =  "Didsbury West", inline = T),
-                 radioButtons("election4", "Election", choices = c("Local 2021", "General 2019", "Local 2019", "Local 2018", "Any Local 18-21"), selected = "Local 2021", inline = T),
+                 radioButtons("election4", "Election to compare", choices = c("Local 2021", "General 2019", "Local 2019", "Local 2018", "Any Local 18-21"), selected = "Local 2021", inline = T),
                  checkboxGroupInput("voters4", "Voter type", choices = c("In Person", "Postal"), selected = c("In Person", "Postal"), inline = T),
                  checkboxGroupInput("shuttle4", "Shuttleworth", choices = c("Shuttle", "Non-Shuttle"), selected = c("Shuttle", "Non-Shuttle"), inline = T),
                  pickerInput("regcycle4", "Year registered", 
@@ -111,8 +126,8 @@ ui <- fluidPage(
 )
 
 server <- function(input, output) {
-  
-  #tab 1
+
+  #tab 1 basic stats
   output$table0=renderUI({
     if(input$group0=="Ward")
     {
@@ -138,7 +153,7 @@ server <- function(input, output) {
       htmltools_value()
   })
   
-  #tab 2
+  #tab 2 turnout
   output$distPlot1 <- renderPlot({
     Data2=Data %>% filter(
       WardName%in%input$ward,
@@ -147,26 +162,33 @@ server <- function(input, output) {
       PV2%in%input$voters,
     )
     
+
+    
     #picking the grouping variable
     if(input$group=="Ward")
     {
-      Data3=Data2 %>% rename("foo"="WardName") 
+      Data3=Data2 %>% rename("foo"="WardName") %>% arrange(foo)
     }else if(input$group=="Polling District")
     {
-      Data3=Data2 %>% rename("foo"="PollingDistrictCode") 
+      Data3=Data2 %>% rename("foo"="PollingDistrictCode") %>% arrange(foo)
     }else if(input$group=="Shuttle")
     {
-      Data3=Data2 %>% rename("foo"="Shuttle2") 
+      Data3=Data2 %>% rename("foo"="Shuttle2") %>% arrange(foo)
     }else if(input$group=="Vote Type")
     {
       Data3=Data2 %>% rename("foo"="PV2") 
     }else if(input$group=="Year registered")
     {
-      Data3=Data2 %>% rename("foo"="regcycle") 
+      Data3=Data2 %>% rename("foo"="regcycle") %>% arrange(foo)
     }
     
+    wardturnout=Data %>% 
+      filter(WardName%in%input$ward)%>%
+      group_by(WardName)%>% 
+      summarise(V=mean(L22), x=n()) %>% 
+      mutate(WardName=paste(WardName, "turnout"), v2=V+0.01, foo=Data3$foo[1])
     
-    Data3 %>% group_by(foo)%>% 
+   g= Data3 %>% group_by(foo)%>% 
       summarise(V=mean(L22), x=n()) %>% 
       ggplot(aes(x=foo, y=V, fill=foo))+
       geom_bar(stat="identity")+
@@ -174,11 +196,23 @@ server <- function(input, output) {
       ylab("Turnout")+
       scale_y_continuous(labels = scales::percent)+
       theme_bw()+
-      theme(legend.position="none")
+      theme(legend.position="none",
+            axis.text = element_text(color = "black", size=10),
+            axis.title = element_text(color = "black", size=13),)
+   
+   if(input$av)
+   {
+     g+geom_hline(yintercept = wardturnout$V, size=0.75)+
+       geom_text(data=wardturnout, aes(x=foo, y=v2, label=WardName),hjust = 0)
+   }else
+   {
+     g
+   }
     
     
-  })
-  #tab 3
+  }, height = reactive(0.8*input$dimension[2]))
+  
+  #tab 3 phantom shuttle
   output$distPlot2 <- renderPlot({
     
     Data4=Data %>% filter(WardName%in%input$ward2,
@@ -212,18 +246,20 @@ server <- function(input, output) {
       xlab("Box")+
       ylab("LD votes")+
       theme_bw()+
-      theme(legend.position="none")
+      theme(legend.position="none",
+            axis.text = element_text(color = "black", size=10),
+            axis.title = element_text(color = "black", size=13),)
     
-  })
+  }, height = reactive(0.8*input$dimension[2]))
   
-  # Tab 4
+  # Tab 4 Turnover
   
   output$distPlot3<-renderPlot({
     Data6= Data %>% mutate(voted=if_else(L22, "Yes", "No"))%>% 
-      filter(WardName%in%input$ward4,
-             regcycle%in%input$regcycle4,
-             Shuttle2%in%input$shuttle4,
-             PV2%in%input$voters4,
+      filter(WardName%in%input$ward3,
+             regcycle%in%input$regcycle3,
+             Shuttle2%in%input$shuttle3,
+             PV2%in%input$voters3,
              voted %in% input$voted3)
     
     if(input$group3=="Ward")
@@ -252,10 +288,14 @@ server <- function(input, output) {
       ylab("%")+
       scale_x_discrete(guide = guide_axis(angle = -45))+
       labs(fill=input$group3)+
-      theme_bw()
-  })
+      theme_bw()+
+      theme(legend.position="none",
+            axis.text = element_text(color = "black", size=10),
+            axis.title = element_text(color = "black", size=13),)
+    
+  },  height = reactive(0.8*input$dimension[2]))
   
-  #tab 5
+  #tab 5 voting history
   output$distPlot4<-renderPlot({
     Data8= Data %>% 
       filter(WardName%in%input$ward4,
@@ -311,8 +351,9 @@ server <- function(input, output) {
       theme_sankey(base_size = 12)+
       scale_fill_manual(values = c("#E41A1C", "#F6CB2F", "#4DAF4A"))+
       scale_x_discrete(name=c("foo", "L22"), labels=c(input$election4, "Local 2022"), position="top")+
-      theme(legend.position = "none", axis.title.x = element_blank())
-  })
+      theme(legend.position = "none", axis.title.x = element_blank(),
+            axis.text.x = element_text(color = "grey20", size = 20, hjust = .5, vjust = .5, face = "bold"))
+  }, height = reactive(0.8*input$dimension[2]))
   
 }
 
