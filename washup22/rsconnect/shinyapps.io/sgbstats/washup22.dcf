@@ -5,9 +5,9 @@ account: sgbstats
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 6425654
-bundleId: 5983410
+bundleId: 5992168
 url: https://sgbstats.shinyapps.io/washup22/
-when: 1654552407.31801
-lastSyncTime: 1654552407.31801
+when: 1654769663.22825
+lastSyncTime: 1654769663.22825
 asMultiple: FALSE
 asStatic: FALSE
