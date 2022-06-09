@@ -75,8 +75,10 @@ ui <- fluidPage(
                sidebarPanel(
                  checkboxGroupInput("ward2", "Ward", choices = c("Didsbury East", "Didsbury West"), selected =  "Didsbury West", inline = T),
                  radioButtons("Box", "Postal voters", choices = c("In Boxes", "Separate"), selected = "In Boxes", inline = T),
+                 radioButtons("n_pc", "Count or percentage", choices = c("Count", "Percentage Phantom"), selected = "Count"),
                  width=4,
-                 tags$p("Faint part is phantom LD voters: the number of votes for us in the box minus those on the shuttle that voted (who are in block colour)")
+                 tags$p("Faint part is phantom LD voters: the number of votes for us in the box minus those on the shuttle that voted (who are in block colour)"),
+                 tags$p("For percentage phantom, it is calculated as the 100%-(number in the shuttle/number of votes we got). A negative score denotes that more people on the shuttle voted than than we received votes (bad).")
                ),
                mainPanel(
                  plotOutput("distPlot2")
@@ -95,6 +97,7 @@ ui <- fluidPage(
                              choices = yearreg, selected = yearreg,                 
                              options = list(`actions-box` = TRUE),
                              multiple = T),
+                 tags$p("UK: unknown registration date, most likely prior to 2012."),
                  width=4
                ),
                mainPanel(
@@ -240,6 +243,9 @@ server <- function(input, output) {
       Data5=Data4 %>% rename("foo"="PD2") %>% count(foo)
     }
     
+    
+    if(input$n_pc=="Count")
+    {
     box2 %>% ggplot(aes(x=Box, y=total, fill=Box))+
       geom_bar(stat = "identity", alpha=0.5)+
       geom_bar(data=Data5, aes(x=foo, y=n, fill=foo),stat="identity")+
@@ -249,6 +255,22 @@ server <- function(input, output) {
       theme(legend.position="none",
             axis.text = element_text(color = "black", size=10),
             axis.title = element_text(color = "black", size=13),)
+    }else if(input$n_pc=="Percentage Phantom")
+    {
+      box3=merge(box2, Data5, by.x="Box", by.y="foo" ) %>%
+        mutate(diff=1-n/total)
+
+      box3 %>% ggplot(aes(x=Box, y=diff, fill=Box))+
+        geom_bar(stat = "identity", alpha=0.5)+
+        xlab("Box")+
+        ylab("% phantom shuttle")+
+        theme_bw()+
+        theme(legend.position="none",
+              axis.text = element_text(color = "black", size=10),
+              axis.title = element_text(color = "black", size=13),)+
+        scale_y_continuous(labels = scales::percent)
+    }
+    
     
   }, height = reactive(0.8*input$dimension[2]))
   
@@ -289,7 +311,7 @@ server <- function(input, output) {
       scale_x_discrete(guide = guide_axis(angle = -45))+
       labs(fill=input$group3)+
       theme_bw()+
-      theme(legend.position="none",
+      theme(
             axis.text = element_text(color = "black", size=10),
             axis.title = element_text(color = "black", size=13),)
     
@@ -340,16 +362,28 @@ server <- function(input, output) {
     #does the stuff for the sankey diagram
     df=sankey %>% make_long(foo, L22) 
     
+    df_nr <- 
+      df %>% 
+      filter(!is.na(node)) %>% 
+      group_by(x, node)%>% 
+      summarise(count = n())
+    
+    df <- 
+      df %>% 
+      left_join(df_nr) %>% 
+      mutate(count2=paste(node, "\n", count, sep=""))
+    
     df %>%   ggplot(aes(x = x, 
                         next_x = next_x, 
                         node = node, 
                         next_node = next_node,
                         fill = factor(node),
-                        label = node)) +
+                        label = count2)) +
       geom_sankey(flow.alpha = 0.75, node.color = 1) +
       geom_sankey_label(size = 3.5, color = 1, fill = "white") +
+      # geom_sankey_text(aes(label = count), size = 3.5, vjust = 2,color = 1, fill = "white", check_overlap = TRUE) +
       theme_sankey(base_size = 12)+
-      scale_fill_manual(values = c("#E41A1C", "#F6CB2F", "#4DAF4A"))+
+      scale_fill_manual(values = c("Didn't Vote"="#E41A1C","Not on register"="#F6CB2F","Voted"="#4DAF4A"))+
       scale_x_discrete(name=c("foo", "L22"), labels=c(input$election4, "Local 2022"), position="top")+
       theme(legend.position = "none", axis.title.x = element_blank(),
             axis.text.x = element_text(color = "grey20", size = 20, hjust = .5, vjust = .5, face = "bold"))
