@@ -42,7 +42,7 @@ ui <- fluidPage(
     tabPanel("Basic Stats", fluid=T,
              sidebarLayout(
                sidebarPanel(
-                 checkboxGroupInput("ward0", "Ward", choices = c("Didsbury East", "Didsbury West"), selected =  c("Didsbury East", "Didsbury West"), inline = T),
+                 checkboxGroupInput("ward0", "Ward", choices = c("Didsbury East", "Didsbury West", "Ancoats & Beswick" ), selected =  c("Didsbury East", "Didsbury West", "Ancoats & Beswick"), inline = T),
                  radioButtons("group0", "Level", choices = c("Ward", "Polling District"), selected = "Ward", inline = T),
                  width=4
                ),
@@ -54,7 +54,7 @@ ui <- fluidPage(
     tabPanel("Turnout", fluid=T,
              sidebarLayout(
                sidebarPanel(
-                 checkboxGroupInput("ward", "Ward", choices = c("Didsbury East", "Didsbury West"), selected =  "Didsbury West", inline = T),
+                 checkboxGroupInput("ward", "Ward", choices = c("Didsbury East", "Didsbury West", "Ancoats & Beswick" ), selected =  "Didsbury West", inline = T),
                  radioButtons("group", "Level", choices = c("Ward", "Polling District", "Shuttle", "Vote Type", "Year registered"), selected = "Polling District", inline = T),
                  checkboxGroupInput("voters", "Voter type", choices = c("In Person", "Postal"), selected = c("In Person", "Postal"), inline = T),
                  checkboxGroupInput("shuttle", "Shuttleworth", choices = c("Shuttle", "Non-Shuttle"), selected = c("Shuttle", "Non-Shuttle"), inline = T),
@@ -73,7 +73,7 @@ ui <- fluidPage(
     tabPanel("Phantom Shuttle", fluid=T,
              sidebarLayout(
                sidebarPanel(
-                 checkboxGroupInput("ward2", "Ward", choices = c("Didsbury East", "Didsbury West"), selected =  "Didsbury West", inline = T),
+                 checkboxGroupInput("ward2", "Ward", choices = c("Didsbury East", "Didsbury West", "Ancoats & Beswick" ), selected =  "Didsbury West", inline = T),
                  radioButtons("Box", "Postal voters", choices = c("In Boxes", "Separate"), selected = "In Boxes", inline = T),
                  radioButtons("n_pc", "Count or percentage", choices = c("Count", "Percentage Phantom"), selected = "Count"),
                  width=4,
@@ -88,7 +88,7 @@ ui <- fluidPage(
     tabPanel("Turnover", fluid=T,
              sidebarLayout(
                sidebarPanel(
-                 checkboxGroupInput("ward3", "Ward", choices = c("Didsbury East", "Didsbury West"), selected =  "Didsbury West", inline = T),
+                 checkboxGroupInput("ward3", "Ward", choices = c("Didsbury East", "Didsbury West", "Ancoats & Beswick" ), selected =  "Didsbury West", inline = T),
                  radioButtons("group3", "Level", choices = c("Ward", "Polling District", "Shuttle", "Vote Type"), selected = "Ward", inline = T),
                  checkboxGroupInput("voted3", "Voted?", choices = c("Yes", "No"), selected = c("Yes"), inline = T),
                  checkboxGroupInput("voters3", "Voter type", choices = c("In Person", "Postal"), selected = c("In Person", "Postal"), inline = T),
@@ -108,8 +108,8 @@ ui <- fluidPage(
     tabPanel("Voting History", fluid=T,
              sidebarLayout(
                sidebarPanel(
-                 checkboxGroupInput("ward4", "Ward", choices = c("Didsbury East", "Didsbury West"), selected =  "Didsbury West", inline = T),
-                 radioButtons("election4", "Election to compare", choices = c("Local 2021", "General 2019", "Local 2019", "Local 2018", "Any Local 18-21"), selected = "Local 2021", inline = T),
+                 checkboxGroupInput("ward4", "Ward", choices = c("Didsbury East", "Didsbury West", "Ancoats & Beswick" ), selected =  "Didsbury West", inline = T),
+                 radioButtons("election4", "Election to compare", choices = c("Local 2021", "General 2019", "Local 2019", "Local 2018", "Local By-election 2022", "Any Local 18-21"), selected = "Local 2021", inline = T),
                  checkboxGroupInput("voters4", "Voter type", choices = c("In Person", "Postal"), selected = c("In Person", "Postal"), inline = T),
                  checkboxGroupInput("shuttle4", "Shuttleworth", choices = c("Shuttle", "Non-Shuttle"), selected = c("Shuttle", "Non-Shuttle"), inline = T),
                  pickerInput("regcycle4", "Year registered", 
@@ -334,6 +334,10 @@ server <- function(input, output) {
              L18=case_when(regcycle2>2018~"Not on register",
                            L18~"Voted",
                            !L18~"Didn't Vote"),
+             B22=case_when(regcycle2>2022~"Not on register",
+                           B22~"Voted",
+                           !B22&WardName=="Ancoats & Beswick"~"Didn't Vote",
+                           T~"No Election"),
              PrevL=case_when(regcycle2==2022~"Not on register",
                              PrevL~"Voted",
                              !PrevL~"Didn't Vote"),
@@ -356,6 +360,9 @@ server <- function(input, output) {
     }else if(input$election4=="Local 2018")
     {
       sankey=Data8 %>% rename("foo"="L18")
+    }else if(input$election4=="Local By-election 2022")
+    {
+      sankey=Data8 %>% rename("foo"="B22")
     }
     
     

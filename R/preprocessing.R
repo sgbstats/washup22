@@ -4,10 +4,11 @@ library(readxl)
 streets=read_xlsx("Data/streets.xlsx", sheet= "Address to street")
 walks=read_xlsx("Data/streets.xlsx", sheet= "Walks")
 pools=read_xlsx("Data/Pools.xlsx")
-boxes0=read_xlsx("Data/boxes.xlsx") %>% mutate(total=ipvotesest+pvvotesest, Box=paste("4", Box, sep=""))
+boxes0=read_xlsx("Data/Boxes.xlsx") %>% mutate(total=ipvotesest+pvvotesest, Box=case_when(grepl("DW", Box)~paste("4", Box, sep=""),
+                                                                                          grepl("AB", Box)~paste("2", Box, sep="")))
 
 # This was moved to a file not in the repo for security concerns
-regdata <- read_excel("C:\\Users\\mbbx4sb5\\OneDrive\\LD\\Side projects\\Shiny washup\\regdata.xlsx")
+regdata <- readxl::read_excel("C:\\Users\\mbbx4sb5\\OneDrive - Personal\\OneDrive\\LD\\Side projects\\Shiny washup\\regdata.xlsx")
 
 regdata2 = regdata 
 # %>% merge(streets, by=c("AddressLine1", "AddressLine2", "AddressLine3", "City","PostalCode")) %>%
@@ -23,8 +24,9 @@ Data=regdata2 %>%
          L19=`Voter File VANID`%in%pools$L19,
          L18=`Voter File VANID`%in%pools$L18,
          G19=`Voter File VANID`%in%pools$G19,
+         B22=`Voter File VANID`%in%pools$B22,
          PV=`Voter File VANID`%in%pools$PV,
-         PrevL=L18|L19|L21) %>% 
+         PrevL=L18|L19|L21|B22) %>% 
   mutate(year=factor(if_else(!is.na(DateReg),as.character(lubridate::year(DateReg)),"UK"),
                      c("UK", as.character(seq(from=2001, to=2022, by=1))), ordered=T),
          regcycle=factor(if_else(!is.na(DateReg),as.character(lubridate::year(DateReg+months(6))),"UK"),
@@ -56,7 +58,8 @@ boxes=boxes0 %>% rbind.data.frame(DEIP %>% merge(DEPV, by="PollingDistrictCode")
                                     rename("Box"="PollingDistrictCode")%>%
                                     mutate(total=ipvotesest+pvvotesest, Party="LD")) %>%
   mutate(Ward=case_when(grepl("DW", Box)~"Didsbury West",
-                        grepl("DE", Box)~"Didsbury East")) %>% 
+                        grepl("DE", Box)~"Didsbury East",
+                        grepl("AB", Box)~"Ancoats & Beswick")) %>% 
   filter(Party=="LD") %>% 
   select(-Party)
 
