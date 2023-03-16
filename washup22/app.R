@@ -44,6 +44,17 @@ ui <- fluidPage(
                sidebarPanel(
                  checkboxGroupInput("ward0", "Ward", choices = c("Didsbury East", "Didsbury West", "Ancoats & Beswick" ), selected =  c("Didsbury East", "Didsbury West", "Ancoats & Beswick"), inline = T),
                  radioButtons("group0", "Level", choices = c("Ward", "Polling District"), selected = "Ward", inline = T),
+                 pickerInput("regcycle0", "Year registered", 
+                             choices = yearreg, selected = yearreg,                 
+                             options = list(`actions-box` = TRUE),
+                             multiple = T),
+                 
+                 checkboxInput("prevvoters", "Previous voters only"),
+                 conditionalPanel(condition="input.prevvoters==1",
+                   checkboxGroupInput("votehistory1", "Voting history (any of)", choices = c("Local 21"="L21", "Local 19"="L19", "Local 18"="L18", "General 19"="G19", "By election 22"="B22"), selected = "L21", inline=T)
+                 )
+                 ,
+                 conditionalPanel(condition="input.prevvoters==2"),
                  width=4
                ),
                mainPanel(
@@ -62,7 +73,13 @@ ui <- fluidPage(
                              choices = yearreg, selected = yearreg,                 
                              options = list(`actions-box` = TRUE),
                              multiple = T),
-                 checkboxInput("av", "Display ward turnout"),
+                 checkboxInput("prevvoters2", "Previous voters only"),
+                 conditionalPanel(condition="input.prevvoters2==1",
+                                  checkboxGroupInput("votehistory2", "Voting history (any of)", choices = c("Local 21"="L21", "Local 19"="L19", "Local 18"="L18", "General 19"="G19", "By election 22"="B22"), selected = "L21", inline=T)
+                 )
+                 ,
+                 conditionalPanel(condition="input.prevvoters2==2"),
+                 checkboxInput("av", "Display overall ward turnout"),
                  width=4
                ),
                mainPanel(
@@ -129,7 +146,7 @@ ui <- fluidPage(
 )
 
 server <- function(input, output) {
-
+  
   #tab 1 basic stats
   output$table0=renderUI({
     if(input$group0=="Ward")
@@ -139,7 +156,19 @@ server <- function(input, output) {
     {
       Data9=Data  %>% filter(WardName %in% input$ward0) %>% rename("foo"="PollingDistrictCode")
     }
+    if(input$prevvoters){
+      vh=Data %>% select(`Voter File VANID`, input$votehistory1) %>% 
+      pivot_longer(cols=-c(`Voter File VANID`), names_to = "election", values_to = "vote") %>% 
+        filter(vote)
+    }else
+    {
+      vh=Data %>% select(`Voter File VANID`)
+    }
+    
+    
     Data9 %>% 
+      filter(regcycle%in%input$regcycle0,
+             `Voter File VANID` %in% vh$`Voter File VANID`) %>% 
       select(foo, PV, Shuttle, L22) %>% 
       pivot_longer(cols = -c("foo"), names_to = "param", values_to = "aval") %>% 
       group_by(foo, param) %>% 
@@ -153,19 +182,32 @@ server <- function(input, output) {
       flextable() %>% 
       set_header_labels(foo="") %>% 
       autofit() %>%
+      font(fontname = "Arial", part="all") %>% 
       htmltools_value()
   })
   
   #tab 2 turnout
   output$distPlot1 <- renderPlot({
+    
+    if(input$prevvoters2){
+      vh=Data %>% select(`Voter File VANID`, input$votehistory2) %>% 
+        pivot_longer(cols=-c(`Voter File VANID`), names_to = "election", values_to = "vote") %>% 
+        filter(vote)
+    }else
+    {
+      vh=Data %>% select(`Voter File VANID`)
+    }
+    
+    
     Data2=Data %>% filter(
       WardName%in%input$ward,
       regcycle%in%input$regcycle,
       Shuttle2%in%input$shuttle,
       PV2%in%input$voters,
+      `Voter File VANID` %in% vh$`Voter File VANID`
     )
     
-
+    
     
     #picking the grouping variable
     if(input$group=="Ward")
@@ -191,7 +233,7 @@ server <- function(input, output) {
       summarise(V=mean(L22), x=n()) %>% 
       mutate(WardName=paste(WardName, "turnout"), v2=V+0.01, foo=Data3$foo[1])
     
-   g= Data3 %>% group_by(foo)%>% 
+    g= Data3 %>% group_by(foo)%>% 
       summarise(V=mean(L22), x=n()) %>% 
       ggplot(aes(x=foo, y=V, fill=foo))+
       geom_bar(stat="identity")+
@@ -202,15 +244,15 @@ server <- function(input, output) {
       theme(legend.position="none",
             axis.text = element_text(color = "black", size=10),
             axis.title = element_text(color = "black", size=13),)
-   
-   if(input$av)
-   {
-     g+geom_hline(yintercept = wardturnout$V, size=0.75)+
-       geom_text(data=wardturnout, aes(x=foo, y=v2, label=WardName),hjust = 0)
-   }else
-   {
-     g
-   }
+    
+    if(input$av)
+    {
+      g+geom_hline(yintercept = wardturnout$V, size=0.75)+
+        geom_text(data=wardturnout, aes(x=foo, y=v2, label=WardName),hjust = 0)
+    }else
+    {
+      g
+    }
     
     
   }, height = reactive(0.8*input$dimension[2]))
@@ -222,6 +264,7 @@ server <- function(input, output) {
                           L22, Shuttle) %>% 
       mutate(PD2=case_when(WardName=="Didsbury West" &PV~ "DW Postal",
                            WardName=="Didsbury East" &PV~ "DE Postal",
+                           WardName=="Ancoats & Beswick" &PV~ "AB Postal",
                            T~PollingDistrictCode))
     
     #calculates whether to count the postals separate
@@ -237,7 +280,9 @@ server <- function(input, output) {
         rbind.data.frame(boxes%>% filter(Ward%in%input$ward2) %>% 
                            group_by( Ward) %>% 
                            summarise(total=sum(pvvotesest)) %>% 
-                           mutate(Box=if_else(Ward=="Didsbury West", "DW Postal", "DE Postal")) %>% 
+                           mutate(Box=case_when(Ward=="Didsbury West"~"DW Postal", 
+                                                Ward=="Didsbury East"~"DE Postal",
+                                                Ward=="Ancoats & Beswick"~"AB Postal")) %>% 
                            ungroup()) %>% 
         ungroup()
       Data5=Data4 %>% rename("foo"="PD2") %>% count(foo)
@@ -246,20 +291,20 @@ server <- function(input, output) {
     
     if(input$n_pc=="Count")
     {
-    box2 %>% ggplot(aes(x=Box, y=total, fill=Box))+
-      geom_bar(stat = "identity", alpha=0.5)+
-      geom_bar(data=Data5, aes(x=foo, y=n, fill=foo),stat="identity")+
-      xlab("Box")+
-      ylab("LD votes")+
-      theme_bw()+
-      theme(legend.position="none",
-            axis.text = element_text(color = "black", size=10),
-            axis.title = element_text(color = "black", size=13),)
+      box2 %>% ggplot(aes(x=Box, y=total, fill=Box))+
+        geom_bar(stat = "identity", alpha=0.5)+
+        geom_bar(data=Data5, aes(x=foo, y=n, fill=foo),stat="identity")+
+        xlab("Box")+
+        ylab("LD votes")+
+        theme_bw()+
+        theme(legend.position="none",
+              axis.text = element_text(color = "black", size=10),
+              axis.title = element_text(color = "black", size=13),)
     }else if(input$n_pc=="Percentage Phantom")
     {
       box3=merge(box2, Data5, by.x="Box", by.y="foo" ) %>%
         mutate(diff=1-n/total)
-
+      
       box3 %>% ggplot(aes(x=Box, y=diff, fill=Box))+
         geom_bar(stat = "identity", alpha=0.5)+
         xlab("Box")+
@@ -312,8 +357,8 @@ server <- function(input, output) {
       labs(fill=input$group3)+
       theme_bw()+
       theme(
-            axis.text = element_text(color = "black", size=10),
-            axis.title = element_text(color = "black", size=13),)
+        axis.text = element_text(color = "black", size=10),
+        axis.title = element_text(color = "black", size=13),)
     
   },  height = reactive(0.8*input$dimension[2]))
   
