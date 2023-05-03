@@ -94,7 +94,7 @@ ui <- fluidPage(
                sidebarPanel(
                  checkboxGroupInput("ward2", "Ward", choices = c("Didsbury East", "Didsbury West", "Ancoats & Beswick" ), selected =  "Didsbury West", inline = T),
                  radioButtons("Box", "Level", choices = c("PVs in Boxes", "PVs separate", "Ward-wide"), selected = "PVs in Boxes", inline = T),
-                 radioButtons("n_pc", "Count or percentage", choices = c("Count", "Percentage Phantom"), selected = "Count"),
+                 radioButtons("n_pc", "Count or percentage", choices = c("Count", "Percentage Phantom", "Absolute Phantom"), selected = "Count"),
                  width=4,
                  tags$p("Faint part is phantom LD voters: the number of votes for us in the box minus those on the shuttle that voted (who are in block colour)"),
                  tags$p("For percentage phantom, it is calculated as the 100%-(number in the shuttle/number of votes we got). A negative score denotes that more people on the shuttle voted than than we received votes (bad).")
@@ -377,7 +377,23 @@ server <- function(input, output) {
               axis.title = element_text(color = "black", size=13),)+
         scale_y_continuous(labels = scales::percent)+
         scale_fill_manual(values = cols)
-    }
+    }else if(input$n_pc=="Absolute Phantom")
+      {
+      
+      box4=merge(Data5, box2, by.y="Box", by.x="foo") %>% 
+        mutate(diff=total-n)
+      
+        box4 %>% ggplot(aes(x=foo, y=diff, fill=foo))+
+          geom_bar(stat = "identity", alpha=0.5)+
+          # geom_bar(data=Data5, aes(x=foo, y=n, fill=foo),stat="identity")+
+          xlab("Box")+
+          ylab("Phantom LD votes")+
+          theme_bw()+
+          theme(legend.position="none",
+                axis.text = element_text(color = "black", size=10),
+                axis.title = element_text(color = "black", size=13),)+
+          scale_fill_manual(values = cols)
+      }
     
     
   }, height = reactive(0.8*input$dimension[2]))
