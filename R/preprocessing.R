@@ -86,6 +86,6 @@ boxes23=read.csv("Data/Postalsupdate.csv") %>%
   rename("total"="votesest")
 
 
-save(Data, boxes22, boxes23, file="washup22/Data/Data.RDa")
+save(Data, boxes22, boxes23, file="washup/Data/Data.RDa")
 
 
