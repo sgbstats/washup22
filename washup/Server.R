@@ -320,15 +320,28 @@ server <- function(input, output) {
              moved %in% movedstatus) %>% 
       rename("foo"=input$group4)
     
-    Data4_1 %>% count(foo, regcycle) %>% 
-      merge(Data4_1 %>% count(foo), by="foo") %>% 
-      mutate(n_pc=100*n.x/n.y) %>% 
+    if(input$abs_pc=="pc")
+    {
+      Data4_2=Data4_1 %>% count(foo, regcycle) %>% 
+        merge(Data4_1 %>% count(foo), by="foo") %>% 
+        mutate(n_pc=100*n.x/n.y)
+      
+      ylab="%"
+    }else
+    {
+      Data4_2=Data4_1 %>% count(foo, regcycle) %>% 
+        mutate(n_pc=n)
+      ylab="Voters"
+    }
+     
+    Data4_2%>% 
       ggplot(aes(x=regcycle, fill=foo, y=n_pc))+
       geom_bar(position = "dodge", stat = "identity")+
       xlab("Cycle of registration")+
-      ylab("%")+
+      #labs( fill=NULL)+
+     # ylab(ylab)+
       scale_x_discrete(guide = guide_axis(angle = -45))+
-      labs(fill=input$group4)+
+      labs(y=ylab, fill=NULL)+
       theme_bw()+
       theme(
         axis.text = element_text(color = "black", size=10),

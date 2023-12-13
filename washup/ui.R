@@ -114,10 +114,11 @@ ui <- fluidPage(
              sidebarLayout(
                sidebarPanel(
                  radioButtons("year4", "Year", choices = c("2023"="L23", "2022"="L22"), selected = "L23", inline = T),
+                 radioButtons("abs_pc", "Axis", choices = c("Percentage"="pc", "Absolute"="abs"), selected = "pc", inline = T),
                  checkboxGroupInput("ward4", "Ward", choices = c("Didsbury East", "Didsbury West", "Ancoats & Beswick" ), selected =  "Didsbury West", inline = T),
                  radioButtons("group4", "Level", choices = c("Ward"="WardName",
                                                              "Polling District"="PollingDistrictCode",
-                                                             "Shuttle"="Shuttle2", "Vote Type"="PV2", "Year registered"="regcycle"), selected = "WardName", inline = T),
+                                                             "Shuttle"="Shuttle2", "Vote Type"="PV2"), selected = "WardName", inline = T),
                  checkboxGroupInput("voted4", "Voted?", choices = c("Yes", "No"), selected = c("Yes"), inline = T),
                  checkboxGroupInput("voters4", "Voter type", choices = c("In Person", "Postal"), selected = c("In Person", "Postal"), inline = T),
                  checkboxGroupInput("shuttle4", "Shuttleworth", choices = c("Shuttle", "Non-Shuttle"), selected = c("Shuttle", "Non-Shuttle"), inline = T),
