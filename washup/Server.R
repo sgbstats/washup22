@@ -45,13 +45,14 @@ server <- function(input, output) {
   names(pv)=c("Postal", "In Person")
   shuttle=c("#4DAF4A", "#E41A1C")
   
+  
   regcols=monochromeR::generate_palette(
     "#660099", 
     "go_lighter",
-    n_colours = 22,
+    n_colours = 24,
     view_palette = F
   )
-  names(regcols)=c("UK", 2002:2022)
+  names(regcols)=c("UK", 2002:2024)
   names(shuttle)=c("Shuttle", "Non-Shuttle")
   
   cols=c(ABcols, DWcols, DEcols, pv, shuttle, regcols)
@@ -59,11 +60,9 @@ server <- function(input, output) {
   
   output$table1=renderUI({
     
-    if(input$group1=="Ward")
-    {
+    if(input$group1=="Ward"){
       Data1_1=Data %>% filter(WardName %in% input$ward1) %>%  rename("foo"="WardName")
-    }else
-    {
+    }else{
       Data1_1=Data  %>% filter(WardName %in% input$ward1) %>% rename("foo"="PollingDistrictCode")
     }
     
@@ -75,44 +74,74 @@ server <- function(input, output) {
       vh=Data %>% select(`Voter File VANID`, input$votehistory1_23) %>% 
         pivot_longer(cols=-c(`Voter File VANID`), names_to = "election", values_to = "vote") %>% 
         filter(vote)
-    }else
-    {
+    }else if(input$prevvoters1 && input$year1=="L24"){
+      vh=Data %>% select(`Voter File VANID`, input$votehistory1_24) %>% 
+        pivot_longer(cols=-c(`Voter File VANID`), names_to = "election", values_to = "vote") %>% 
+        filter(vote)
+    }else{
       vh=Data %>% select(`Voter File VANID`)
     }
     
-    if(input$year1=="L22")
-    {
-      Data1_2=Data1_1 %>% 
-        filter(regcycle%in%input$regcycle1,
-               `Voter File VANID` %in% vh$`Voter File VANID`,
-               moved!="IN") %>% 
-        select(foo, PV, Shuttle22, L22) %>% 
-        pivot_longer(cols = -c("foo"), names_to = "param", values_to = "aval") %>% 
-        group_by(foo, param) %>% 
-        summarise(n=sum(aval), pc=mean(aval)) %>% 
-        mutate(n_pc=paste(n, " (", sprintf("%.1f", 100*pc), "%)", sep="")) %>% 
-        select(-n, -pc) %>% 
-        mutate(param=case_when(param=="L22"~"2022 Turnout",
-                               param=="PV"~"Total Postal Voters",
-                               param=="Shuttle22"~"Total Shuttleworth")) 
-      
-    }else if(input$year1=="L23")
-    {
-      Data1_2=Data1_1 %>% 
-        filter(regcycle%in%input$regcycle1,
-               `Voter File VANID` %in% vh$`Voter File VANID`,
-               moved!="OUT") %>% 
-        select(foo, PV, Shuttle23, L23) %>% 
-        pivot_longer(cols = -c("foo"), names_to = "param", values_to = "aval") %>% 
-        group_by(foo, param) %>% 
-        summarise(n=sum(aval), pc=mean(aval)) %>% 
-        mutate(n_pc=paste(n, " (", sprintf("%.1f", 100*pc), "%)", sep="")) %>% 
-        select(-n, -pc) %>% 
-        mutate(param=case_when(param=="L23"~"2023 Turnout",
-                               param=="PV"~"Total Postal Voters",
-                               param=="Shuttle23"~"Total Shuttleworth")) 
-    }
+    Data1_2=Data1_1 %>% 
+      filter(regcycle%in%input$regcycle1,
+             `Voter File VANID` %in% vh$`Voter File VANID`,
+             grepl(input$year1, regstatus)
+      ) %>% 
+      select(foo, PV, gsub("L", "Shuttle", input$year1), input$year1) %>% 
+      pivot_longer(cols = -c("foo"), names_to = "param", values_to = "aval") %>% 
+      group_by(foo, param) %>% 
+      summarise(n=sum(aval), pc=mean(aval)) %>% 
+      mutate(n_pc=paste(n, " (", sprintf("%.1f", 100*pc), "%)", sep="")) %>% 
+      select(-n, -pc) %>% 
+      mutate(param=case_when(param==input$year1~paste0("20", gsub("L", "", input$year1), " Turnout"),
+                             param=="PV"~"Total Postal Voters",
+                             param==gsub("L", "Shuttle", input$year1)~"Total Shuttleworth")) 
     
+    # if(input$year1=="L22"){
+    #   Data1_2=Data1_1 %>% 
+    #     filter(regcycle%in%input$regcycle1,
+    #            `Voter File VANID` %in% vh$`Voter File VANID`,
+    #            grepl("22", regstuats)) %>% 
+    #     select(foo, PV, Shuttle22, L22) %>% 
+    #     pivot_longer(cols = -c("foo"), names_to = "param", values_to = "aval") %>% 
+    #     group_by(foo, param) %>% 
+    #     summarise(n=sum(aval), pc=mean(aval)) %>% 
+    #     mutate(n_pc=paste(n, " (", sprintf("%.1f", 100*pc), "%)", sep="")) %>% 
+    #     select(-n, -pc) %>% 
+    #     mutate(param=case_when(param=="L22"~"2022 Turnout",
+    #                            param=="PV"~"Total Postal Voters",
+    #                            param=="Shuttle22"~"Total Shuttleworth")) 
+    #   
+    # }else if(input$year1=="L23"){
+    #   Data1_2=Data1_1 %>% 
+    #     filter(regcycle%in%input$regcycle1,
+    #            `Voter File VANID` %in% vh$`Voter File VANID`,
+    #            grepl("23", regstuats)) %>% 
+    #     select(foo, PV, Shuttle23, L23) %>% 
+    #     pivot_longer(cols = -c("foo"), names_to = "param", values_to = "aval") %>% 
+    #     group_by(foo, param) %>% 
+    #     summarise(n=sum(aval), pc=mean(aval)) %>% 
+    #     mutate(n_pc=paste(n, " (", sprintf("%.1f", 100*pc), "%)", sep="")) %>% 
+    #     select(-n, -pc) %>% 
+    #     mutate(param=case_when(param=="L23"~"2023 Turnout",
+    #                            param=="PV"~"Total Postal Voters",
+    #                            param=="Shuttle23"~"Total Shuttleworth")) 
+    # }else if(input$year1=="L24"){
+    #   Data1_2=Data1_1 %>% 
+    #     filter(regcycle%in%input$regcycle1,
+    #            `Voter File VANID` %in% vh$`Voter File VANID`,
+    #            grepl("24", regstuats)) %>% 
+    #     select(foo, PV, Shuttle24, L24) %>% 
+    #     pivot_longer(cols = -c("foo"), names_to = "param", values_to = "aval") %>% 
+    #     group_by(foo, param) %>% 
+    #     summarise(n=sum(aval), pc=mean(aval)) %>% 
+    #     mutate(n_pc=paste(n, " (", sprintf("%.1f", 100*pc), "%)", sep="")) %>% 
+    #     select(-n, -pc) %>% 
+    #     mutate(param=case_when(param=="L24"~"2024 Turnout",
+    #                            param=="PV"~"Total Postal Voters",
+    #                            param=="Shuttle24"~"Total Shuttleworth")) 
+    # }
+    # 
     Data1_2 %>% pivot_wider(names_from = "param", values_from = "n_pc") %>% 
       flextable() %>% 
       set_header_labels(foo="") %>% 
@@ -133,26 +162,31 @@ server <- function(input, output) {
       vh=Data %>% select(`Voter File VANID`, input$votehistory2_23) %>% 
         pivot_longer(cols=-c(`Voter File VANID`), names_to = "election", values_to = "vote") %>% 
         filter(vote)
-    }else
-    {
+    }else if(input$prevvoters2 && input$year2=="L24"){
+      vh=Data %>% select(`Voter File VANID`, input$votehistory2_24) %>% 
+        pivot_longer(cols=-c(`Voter File VANID`), names_to = "election", values_to = "vote") %>% 
+        filter(vote)
+    }else{
       vh=Data %>% select(`Voter File VANID`)
     }
-    if(input$year2=="L22")
-    {
-      movedstatus=c("OUT", "STAY")
-    }else if(input$year2=="L23")
-    {
-      movedstatus=c("IN", "STAY")
-    }
-    
+    # if(input$year2=="L22")
+    # {
+    #   movedstatus=c("OUT", "STAY")
+    # }else if(input$year2=="L23")
+    # {
+    #   movedstatus=c("IN", "STAY")
+    # }
+    # 
     Data2_1=Data %>% 
-      rename("Shuttle"=if_else(input$year2=="L22", "Shuttle22", "Shuttle23")) %>% 
+      mutate(Shuttle=!!rlang::sym(gsub("L", "Shuttle", input$year2)),
+             Shuttle2=!!rlang::sym(gsub("L", "Shuttle2_", input$year2))) %>% 
       filter(WardName%in%input$ward2,
              regcycle%in%input$regcycle2,
              Shuttle%in%input$shuttle2,
              PV%in%input$voters2,
              `Voter File VANID` %in% vh$`Voter File VANID`,
-             moved %in% movedstatus) %>% 
+             grepl(input$year2, regstatus)
+      ) %>% 
       rename("foo"=input$group2,
              "foo2"=input$year2)%>%
       arrange(foo)
@@ -160,7 +194,7 @@ server <- function(input, output) {
     
     wardturnout=Data %>% 
       filter(WardName%in%input$ward2,
-             moved %in% movedstatus)%>%
+             grepl(input$year2, regstatus))%>%
       rename("foo2"=input$year2) %>% 
       group_by(WardName)%>% 
       summarise(V=mean(foo2), x=n()) %>% 
@@ -194,19 +228,17 @@ server <- function(input, output) {
   #tab 3 phantom shuttle
   output$distPlot3 <- renderPlot({
     
-    if(input$year3=="L22")
-    {
+    if(input$year3=="L22"){
       Data3_1=Data %>% filter(WardName%in%input$ward3,
-                            L22, Shuttle22) %>% 
+                              L22, Shuttle22) %>% 
         mutate(PD2=case_when(WardName=="Didsbury West" &PV~ "DW Postal",
                              WardName=="Didsbury East" &PV~ "DE Postal",
                              WardName=="Ancoats & Beswick" &PV~ "AB Postal",
                              T~PollingDistrictCode))
       boxes=boxes22
-    }else if(input$year3=="L23")
-    {
+    }else if(input$year3=="L23"){
       Data3_1=Data %>% filter(WardName%in%input$ward3,
-                            L23, Shuttle23) %>% 
+                              L23, Shuttle23) %>% 
         mutate(PollingDistrictCode=gsub("4DEB", "4DEA", PollingDistrictCode),
                PD2=case_when(WardName=="Didsbury West" &PV~ "DW Postal",
                              WardName=="Didsbury East" &PV~ "DE Postal",
@@ -214,7 +246,18 @@ server <- function(input, output) {
                              PollingDistrictCode=="4DEB"~"4DEA",
                              T~PollingDistrictCode))
       boxes=boxes23
+    }else if(input$year3=="L24"){
+      Data3_1=Data %>% filter(WardName%in%input$ward3,
+                              L23, Shuttle23) %>% 
+        mutate(PollingDistrictCode=gsub("4DEB", "4DEA", PollingDistrictCode),
+               PD2=case_when(WardName=="Didsbury West" &PV~ "DW Postal",
+                             WardName=="Didsbury East" &PV~ "DE Postal",
+                             WardName=="Ancoats & Beswick" &PV~ "AB Postal",
+                             PollingDistrictCode=="4DEB"~"4DEA",
+                             T~PollingDistrictCode))
+      boxes=boxes24
     }
+    
     
     
     #calculates whether to count the postals separate
@@ -300,13 +343,7 @@ server <- function(input, output) {
   # Tab 4 Turnover
   
   output$distPlot4<-renderPlot({
-    if(input$year4=="L22")
-    {
-      movedstatus=c("OUT", "STAY")
-    }else if(input$year4=="L23")
-    {
-      movedstatus=c("IN", "STAY")
-    }
+    
     Data4_1= Data %>%
       rename("foo2"=input$year4) %>% 
       mutate(voted=if_else(foo2, "Yes", "No")
@@ -317,7 +354,7 @@ server <- function(input, output) {
              Shuttle2%in%input$shuttle4,
              PV2%in%input$voters4,
              voted %in% input$voted4,
-             moved %in% movedstatus) %>% 
+             grepl(input$year4, regstatus)) %>% 
       rename("foo"=input$group4)
     
     if(input$abs_pc=="pc")
@@ -333,13 +370,13 @@ server <- function(input, output) {
         mutate(n_pc=n)
       ylab="Voters"
     }
-     
+    
     Data4_2%>% 
       ggplot(aes(x=regcycle, fill=foo, y=n_pc))+
       geom_bar(position = "dodge", stat = "identity")+
       xlab("Cycle of registration")+
       #labs( fill=NULL)+
-     # ylab(ylab)+
+      # ylab(ylab)+
       scale_x_discrete(guide = guide_axis(angle = -45))+
       labs(y=ylab, fill=NULL)+
       theme_bw()+
@@ -352,24 +389,32 @@ server <- function(input, output) {
   
   #tab 5 voting history
   output$distPlot5<-renderPlot({
-    movedstatus=ifelse(input$leftreg5, "FOO", "OUT")
+    
     if(input$year5=="L22")
     {
       election="Local 2022"
-      Data5_1=Data %>% filter(Shuttle2_22%in%input$shuttle5, moved!="IN")
+      Data5_1=Data %>% filter(Shuttle2_22%in%input$shuttle5)
     }else if(input$year5=="L23")
     {
-      Data5_1=Data %>% filter(Shuttle2_23%in%input$shuttle5, moved!=movedstatus)
+      Data5_1=Data %>% filter(Shuttle2_23%in%input$shuttle5)
       election="Local 2023"
+    }else if(input$year5=="L24")
+    {
+      Data5_1=Data %>% filter(Shuttle2_24%in%input$shuttle5)
+      election="Local 2024"
     }
     Data5_2= Data5_1 %>%
       filter(
         WardName%in%input$ward5,
-             regcycle%in%input$regcycle5,
-             PV2%in%input$voters5
-        ) %>%
-      mutate(L23=case_when(regcycle2>2023~"Not on register",
-                           moved=="OUT"~"Left Register",
+        regcycle%in%input$regcycle5,
+        PV2%in%input$voters5
+      ) %>%
+      mutate(L24=case_when(regcycle2>2024~"Not on register",
+                           !grepl("L24", regstatus)~"Left Register",
+                           L24~"Voted",
+                           !L24~"Didn't Vote"),
+             L23=case_when(regcycle2>2023~"Not on register",
+                           !grepl("L23", regstatus)~"Left Register",
                            L23~"Voted",
                            !L23~"Didn't Vote"),
              L22=case_when(regcycle2>2022~"Not on register",
@@ -389,42 +434,47 @@ server <- function(input, output) {
                            !B22&WardName=="Ancoats & Beswick"~"Didn't Vote",
                            T~"No Election"),
              PrevL22=case_when(regcycle2>2021~"Not on register",
-                             PrevL22~"Voted",
-                             !PrevL22~"Didn't Vote"),
+                               PrevL22~"Voted",
+                               !PrevL22~"Didn't Vote"),
              PrevL23=case_when(regcycle2>2022~"Not on register",
                                PrevL23~"Voted",
                                !PrevL23~"Didn't Vote"),
+             PrevL23=case_when(regcycle2>2023~"Not on register",
+                               PrevL24~"Voted",
+                               !PrevL24~"Didn't Vote"),
              G19=case_when(G19~"Voted",
                            regcycle2>2019~"Not on register",
                            !G19~"Didn't Vote")) %>%
       rename("foo2"=input$year5)
     
-    electionnames=c("Local 2022"="L22","Local 2021"="L21", "General 2019"="G19", "Local 2019"="L19", "Local 2018"="L18", "Local By-election 2022"="B22", "Any Local 18-21"="PrevL22","Any Local 19-29"="PrevL23")
-    if(input$year5=="L22")
-    {
-      sankey=Data5_2 %>% rename("foo"=input$election5_22)
-      comparename=names(electionnames[electionnames==input$election5_22])
-    }else if(input$year5=="L23")
-    {
-      sankey=Data5_2 %>% rename("foo"=input$election5_23)
-      comparename=names(electionnames[electionnames==input$election5_23])
-    }
-
+    electionnames=c("Local 2023"="L23","Local 2022"="L22","Local 2021"="L21", "General 2019"="G19", "Local 2019"="L19", "Local 2018"="L18", "Local By-election 2022"="B22", "Any Local 18-21"="PrevL22","Any Local 19-29"="PrevL23")
+  
+      sankey0=Data5_2 %>% 
+        rename("foo"=input$election5)%>%
+        filter(foo!="Left Register")
+      comparename=names(electionnames[electionnames==input$election5])
    
-     #does the stuff for the sankey diagram
-    df=sankey %>% make_long(foo, foo2)
-
+    # 
+    if(input$leftreg5){
+      sankey=sankey0 
+    }else{
+      sankey=sankey0 %>% filter(foo2!="Left Register")
+    }
+    #does the stuff for the sankey diagram
+    df=sankey %>% 
+      make_long(foo, foo2)
+    
     df_nr <-
       df %>%
       filter(!is.na(node)) %>%
       group_by(x, node)%>%
       summarise(count = n())
-
+    
     df <-
       df %>%
       left_join(df_nr) %>%
       mutate(count2=paste(node, "\n", count, sep=""))
-
+    
     df %>%   ggplot(aes(x = x,
                         next_x = next_x,
                         node = node,
@@ -440,4 +490,6 @@ server <- function(input, output) {
       theme(legend.position = "none", axis.title.x = element_blank(),
             axis.text.x = element_text(color = "grey20", size = 20, hjust = .5, vjust = .5, face = "bold"))
   }, height = reactive(0.8*input$dimension[2]))
+  
+  
 }

@@ -8,24 +8,32 @@ boxes0=read_xlsx("Data/Boxes.xlsx") %>% mutate(total=ipvotesest+pvvotesest, Box=
                                                                                           grepl("AB", Box)~paste("2", Box, sep="")))
 
 # This was moved to a file not in the repo for security concerns
-regdata <- readxl::read_excel("C:\\Users\\mbbx4sb5\\OneDrive - Personal\\OneDrive\\LD\\Side projects\\Shiny washup\\regdata.xlsx")
+regdata22 <- readxl::read_excel("C:\\Users\\mbbx4sb5\\OneDrive - Personal\\OneDrive\\LD\\Side projects\\Shiny washup\\regdata.xlsx")
 regdata23 <- readxl::read_excel("C:\\Users\\mbbx4sb5\\OneDrive - Personal\\OneDrive\\LD\\Side projects\\Shiny washup\\regdata23.xlsx")
+regdata24 <- readxl::read_excel("C:\\Users\\mbbx4sb5\\OneDrive - Personal\\OneDrive\\LD\\Side projects\\Shiny washup\\regdata224.xlsx")
 
 
-regdata2 = regdata %>% 
+regdata = regdata22 %>% 
   select(-contains("Address"), -PostalCode, -City) %>% 
-  mutate(moved=if_else(`Voter File VANID`%notin%regdata23$`Voter File VANID`, "OUT", "STAY")) %>% 
-  rbind.data.frame(regdata23 %>% filter(`Voter File VANID`%notin%regdata$`Voter File VANID`, DateReg<as.Date("2023-06-02")) %>% 
-                     select(-ElectorNumberWithSuffix) %>% mutate(moved="IN"))
+  rbind.data.frame(regdata23 %>% filter(`Voter File VANID`%notin%regdata22$`Voter File VANID`, DateReg<as.Date("2023-06-02")) %>% 
+                     select(-ElectorNumberWithSuffix)) %>% 
+  rbind.data.frame(regdata24 %>% filter(`Voter File VANID`%notin%regdata22$`Voter File VANID`,
+                                        `Voter File VANID`%notin%regdata23$`Voter File VANID`,
+                                        DateReg<as.Date("2024-06-02"))) %>% 
+  mutate(regstatus=paste0(if_else(`Voter File VANID`%in%regdata22$`Voter File VANID`,"L22", ""),
+                          if_else(`Voter File VANID`%in%regdata23$`Voter File VANID`,"L23", ""),
+                          if_else(`Voter File VANID`%in%regdata24$`Voter File VANID`,"L24", "")))
 # %>% merge(streets, by=c("AddressLine1", "AddressLine2", "AddressLine3", "City","PostalCode")) %>%
 #   select(-c("AddressLine1", "AddressLine2", "AddressLine3", "City","PostalCode")) %>% 
 # merge(walks, by="Walk")
 #this was removed as a feature when I was thinking of doing streets.
 
 #merging in the data for each of the pools
-Data=regdata2 %>% 
+Data=regdata %>% 
   mutate(Shuttle22=`Voter File VANID`%in%pools$Shuttle22,
          Shuttle23=`Voter File VANID`%in%pools$Shuttle23,
+         Shuttle24=`Voter File VANID`%in%pools$Shuttle24,
+         L24=`Voter File VANID`%in%pools$L24,
          L23=`Voter File VANID`%in%pools$L23,
          L22=`Voter File VANID`%in%pools$L22,
          L21=`Voter File VANID`%in%pools$L21,
@@ -35,18 +43,20 @@ Data=regdata2 %>%
          B22=`Voter File VANID`%in%pools$B22,
          PV=`Voter File VANID`%in%pools$PV,
          PrevL22=L18|L19|L21|B22,
-         PrevL23=L23|L19|L21|B22) %>% 
+         PrevL23=L23|L19|L21|B22,
+         PrevL24=L24|L23|L21|B22) %>% 
   mutate(DateReg=if_else(lubridate::year(DateReg)<2001, NA_Date_, DateReg),
          year=factor(if_else(!is.na(DateReg),as.character(lubridate::year(DateReg)),"UK"),
-                     c("UK", as.character(seq(from=2001, to=2023, by=1))), ordered=T),
+                     c("UK", as.character(seq(from=2001, to=2024, by=1))), ordered=T),
          regcycle=factor(if_else(!is.na(DateReg),as.character(lubridate::year(DateReg+months(6))),"UK"),
-                         c("UK", as.character(seq(from=2001, to=2023, by=1))), ordered=T),
+                         c("UK", as.character(seq(from=2001, to=2024, by=1))), ordered=T),
          regcycle2=as.character(regcycle) %>% as.numeric(),
          PollingDistrictCode=if_else(PollingDistrictCode%in%c("44899", "45264"), "4DEC", PollingDistrictCode)) %>% 
   select(-DateReg, -year, -contains("Address"))%>% 
   mutate(PV2=if_else(PV, "Postal", "In Person"),
          Shuttle2_22=if_else(Shuttle22, "Shuttle", "Non-Shuttle"),
-         Shuttle2_23=if_else(Shuttle23, "Shuttle", "Non-Shuttle"))
+         Shuttle2_23=if_else(Shuttle23, "Shuttle", "Non-Shuttle"),
+         Shuttle2_24=if_else(Shuttle24, "Shuttle", "Non-Shuttle"))
 
 
 DEcount=read.csv("Data/Boxest.csv") %>% select(Box, LD) %>% mutate(LD=LD/100, Box=paste("4", Box, sep="")) %>% filter(grepl("DE", Box)) 
@@ -85,7 +95,36 @@ boxes23=read.csv("Data/Postalsupdate.csv") %>%
   filter(Party=="LD") %>% 
   rename("total"="votesest")
 
+boxsize24=read_excel("Data/count24.xlsx", sheet="Boxes")
+boxes24_1=read.csv("Data/Box_count24.csv") %>% 
+  select(-X, -Votes) %>% 
+  filter(Party=="LD") %>% 
+  merge(boxsize24) %>% 
+  mutate(votes=pcv*Total/100) %>% 
+  mutate(Ward=case_when(grepl("DW", Box)~"Didsbury West",
+                        grepl("DE", Box)~"Didsbury East",
+                        grepl("AB", Box)~"Ancoats & Beswick"),
+         Box=case_when(grepl("DW|DE", Box)~paste("4", Box, sep=""),
+                       grepl("AB", Box)~paste("2", Box, sep="")))
 
-save(Data, boxes22, boxes23, file="washup/Data/Data.RDa")
+
+boxes24_2=boxes24_1 %>% 
+          filter(grepl("P", Box)) %>%
+  merge(Data %>% filter(PV) %>% count(WardName, PollingDistrictCode) %>% 
+          mutate(pc=n/sum(n),.by="WardName"), by.x="Ward", by.y="WardName") %>% 
+  mutate(pvvotesest=votes*pc) %>% 
+  select(PollingDistrictCode, pvvotesest, Ward) 
+
+
+boxes24=boxes24_1 %>% 
+  rename(ipvotesest=votes) %>% 
+  filter(!grepl("P", Box)) %>% 
+  merge(boxes24_2, by.x=c("Ward", "Box"), by.y=c("Ward","PollingDistrictCode" )) %>% 
+  mutate(total=ipvotesest+pvvotesest) %>% 
+  select("Box",        "Party" ,     "ipvotesest","pvvotesest", "total"  ,    "Ward" ,)
+
+
+save(Data, boxes22, boxes23,boxes24,  file="washup/Data/Data.RDa")
+
 
 
