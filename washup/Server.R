@@ -390,19 +390,17 @@ server <- function(input, output) {
   #tab 5 voting history
   output$distPlot5<-renderPlot({
     
-    if(input$year5=="L22")
-    {
+    if(input$year5=="L22"){
       election="Local 2022"
       Data5_1=Data %>% filter(Shuttle2_22%in%input$shuttle5)
-    }else if(input$year5=="L23")
-    {
+    }else if(input$year5=="L23") {
       Data5_1=Data %>% filter(Shuttle2_23%in%input$shuttle5)
       election="Local 2023"
-    }else if(input$year5=="L24")
-    {
+    }else if(input$year5=="L24"){
       Data5_1=Data %>% filter(Shuttle2_24%in%input$shuttle5)
       election="Local 2024"
     }
+    
     Data5_2= Data5_1 %>%
       filter(
         WardName%in%input$ward5,
@@ -449,10 +447,13 @@ server <- function(input, output) {
     
     electionnames=c("Local 2023"="L23","Local 2022"="L22","Local 2021"="L21", "General 2019"="G19", "Local 2019"="L19", "Local 2018"="L18", "Local By-election 2022"="B22", "Any Local 18-21"="PrevL22","Any Local 19-29"="PrevL23")
   
+    election=case_when(input$year5=="L22"~input$election5_22,
+                       input$year5=="L23"~input$election5_23,
+                       input$year5=="L24"~input$election5_24)
       sankey0=Data5_2 %>% 
-        rename("foo"=input$election5)%>%
+        rename("foo"=election)%>%
         filter(foo!="Left Register")
-      comparename=names(electionnames[electionnames==input$election5])
+      comparename=names(electionnames[electionnames==election])
    
     # 
     if(input$leftreg5){

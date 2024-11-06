@@ -1,0 +1,97 @@
+{
+  "version": 1,
+  "locale": "en_GB",
+  "platform": "4.4.1",
+  "metadata": {
+    "appmode": "static",
+    "primary_rmd": null,
+    "primary_html": "README.html",
+    "content_category": null,
+    "has_parameters": false
+  },
+  "packages": null,
+  "files": {
+    "Confidential/data24.xlsx": {
+      "checksum": "11658ce04951b18fb91392b3797c0bad"
+    },
+    "Count/boxcount21.xlsx": {
+      "checksum": "1055cfe568cfe869bb0e8055ad2a3678"
+    },
+    "Count/Boxest.csv": {
+      "checksum": "38a3f8c4881ec9618438e9736b1440f0"
+    },
+    "Count/Count.R": {
+      "checksum": "8554619fd5ca12ebef645237f8c84cb3"
+    },
+    "Count/Count.xlsx": {
+      "checksum": "71544213f20120f4db06bc9767502423"
+    },
+    "Count/Postalsupdate.csv": {
+      "checksum": "fec95eaab25574829d1becf4160261c2"
+    },
+    "Count/README.md": {
+      "checksum": "e5316f6c28ce9e56a03c08cc5de06705"
+    },
+    "Data/Box_count24.csv": {
+      "checksum": "4cd5e04477a733616412b209f548f21d"
+    },
+    "Data/Boxes.xlsx": {
+      "checksum": "712019b3f99a788c679df7cc91d0ea69"
+    },
+    "Data/Boxest.csv": {
+      "checksum": "38a3f8c4881ec9618438e9736b1440f0"
+    },
+    "Data/count24.xlsx": {
+      "checksum": "888f31ab5bc288cfd78cd7c8b7c56f2e"
+    },
+    "Data/Pools.xlsx": {
+      "checksum": "9bebca1300074e8644cfd5fa0b6b8fef"
+    },
+    "Data/Postalsupdate.csv": {
+      "checksum": "8382f90836e990048ca56e7b0bfe9caa"
+    },
+    "Data/streets.xlsx": {
+      "checksum": "45c91e7277ac2bfc4c72c17b0edacaf4"
+    },
+    "Junk/dubugging.R": {
+      "checksum": "39c5f3956799d700a4793856df685d4d"
+    },
+    "Junk/turnover.R": {
+      "checksum": "f63d769806dc7b8b1df9d74264756654"
+    },
+    "LICENSE": {
+      "checksum": "0d6535da9df33c60aeb3494cb740859b"
+    },
+    "R/Count.R": {
+      "checksum": "8d2044082d3a61cb95dbc2989d31319c"
+    },
+    "R/preprocessing.R": {
+      "checksum": "2deb98a123c16ee01df17ecdd0db44fe"
+    },
+    "README.html": {
+      "checksum": "79e2469faec660ca28d1884adb9eb07d"
+    },
+    "README.md": {
+      "checksum": "68c8227be2cfdc486aaf4799e1b9605d"
+    },
+    "washup/app.R": {
+      "checksum": "ac2c1b132f55fb8a9287ffe058fa4882"
+    },
+    "washup/Data/Data.RDa": {
+      "checksum": "143b0a2b64bcd30edb97dd96c58dc2ee"
+    },
+    "washup/Data/testdata.R": {
+      "checksum": "de78980b9ce7305a8d3c27aedf4c348c"
+    },
+    "washup/README.md": {
+      "checksum": "68631a2bdf81f621762093c5045cda5a"
+    },
+    "washup/Server.R": {
+      "checksum": "4ab4a8322177144916813d8a08badaa2"
+    },
+    "washup/ui.R": {
+      "checksum": "01434a7a501edbe43414a291109fa8c3"
+    }
+  },
+  "users": null
+}

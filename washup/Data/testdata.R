@@ -36,3 +36,4 @@ input$voters5=c("In Person", "Postal")
 input$leftreg5=F
 input$election5_24="L23"
 input$election5_23="L22"
+input$election5_22="L21"
